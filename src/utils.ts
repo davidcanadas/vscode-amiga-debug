@@ -1,5 +1,3 @@
-import * as vscode from 'vscode';
-
 export function hexFormat(value: number, padding = 8, includePrefix = true): string {
 	let base = value.toString(16);
 	while (base.length < padding) { base = '0' + base; }
