@@ -13,7 +13,7 @@
                 "program=${workspaceFolder}\\${config:amiga.program}-rel",
                 "targetName=Release",
                 "ccExtraOptions=-gdwarf-3 -Ofast -DDEBUG",
-                "vasmExtraOptions=-dwarf=3"
+                "vasmExtraOptions=-dwarf=3 -DDEBUG"
             ],
             "options": {
                 "cwd": "${workspaceRoot}",
@@ -50,7 +50,7 @@
                 "program=${workspaceFolder}\\${config:amiga.program}-dbg",
                 "targetName=Debug",
                 "ccExtraOptions=-gdwarf-3 -DDEBUG",
-                "vasmExtraOptions=-dwarf=3"
+                "vasmExtraOptions=-dwarf=3 -DDEBUG"
             ],
             "options": {
                 "cwd": "${workspaceRoot}",
@@ -86,8 +86,8 @@
                 "extensionPath=${command:amiga.bin-path}",
                 "program=${workspaceFolder}\\${config:amiga.program}",
                 "targetName=Final",
-                "ccExtraOptions=-Ofast -DNEBUG",
-                "vasmExtraOptions="
+                "ccExtraOptions=-Ofast -DNDEBUG",
+                "vasmExtraOptions=-DNDEBUG"
             ],
             "options": {
                 "cwd": "${workspaceRoot}",
