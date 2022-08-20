@@ -25,6 +25,7 @@ This document is a companion of the original vscode-amiga-debug [README.md](READ
     * Release: default target. Optimizations enabled, debuggable (when optimizations allow to). `DEBUG` macro defined for GCC, GAS and VASM.
     * Debug: Optimizations disabled, slower but fully debuggable. `DEBUG` macro defined for GCC, GAS and VASM.
     * Final: Optimizations enabled. Not debuggable. `NDEBUG` macro defined for GCC, GAS and VASM.
+    * Shrinkled: Final, Shrinkler-compressed. Parameters are configurable using VSCode settings.
 
 ## Additional credits
 
