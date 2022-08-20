@@ -390,6 +390,11 @@
 						"type": "string",
 						"default": "c:/amiga/KICK31.rom",
 						"description": "Path to the Kickstart ROM for A4000 models."
+          },
+					"amiga.program": {
+						"type": "string",
+						"default": "out\\a.mingw",
+						"description": "Path to the output program (without extension), relative to the workspace."
 					}
 				}
 			}
