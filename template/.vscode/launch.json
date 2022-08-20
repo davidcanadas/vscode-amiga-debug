@@ -117,6 +117,45 @@
             "program": "${workspaceFolder}/${config:amiga.program}",
             "kickstart": "${config:amiga.rom-paths.A4000}",
             "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile-shrinkled",
+            "name": "Shrinkled - AROS",
+            "config": "A500",
+            "program": "${workspaceFolder}/${config:amiga.program}",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile-shrinkled",
+            "name": "Shrinkled - Amiga 500",
+            "config": "A500",
+            "program": "${workspaceFolder}/${config:amiga.program}",
+            "kickstart": "${config:amiga.rom-paths.A500}",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile-shrinkled",
+            "name": "Shrinkled - Amiga 1200",
+            "config": "A1200",
+            "program": "${workspaceFolder}/${config:amiga.program}",
+            "kickstart": "${config:amiga.rom-paths.A1200}",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile-shrinkled",
+            "name": "Shrinkled - Amiga 4000",
+            "config": "A4000",
+            "program": "${workspaceFolder}/${config:amiga.program}",
+            "kickstart": "${config:amiga.rom-paths.A4000}",
+            "internalConsoleOptions": "openOnSessionStart"
         }        
     ]
 }
