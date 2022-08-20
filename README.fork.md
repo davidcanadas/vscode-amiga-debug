@@ -21,6 +21,10 @@ This document is a companion of the original vscode-amiga-debug [README.md](READ
     * Deadliner's "Color Reducer" tool to reduce the number of colors used by your images using different algorithms.
     * Deadliner's brand new "BLTCON Cheat Sheet" tool to help you designing Blitter operations.
     * The Amiga Hardware Reference Manual (HRM) hosted by Elowar.
+* Support for multiple build targets:
+    * Release: default target. Optimizations enabled, debuggable (when optimizations allow to). `DEBUG` macro defined for GCC, GAS and VASM.
+    * Debug: Optimizations disabled, slower but fully debuggable. `DEBUG` macro defined for GCC, GAS and VASM.
+    * Final: Optimizations enabled. Not debuggable. `NDEBUG` macro defined for GCC, GAS and VASM.
 
 ## Additional credits
 
