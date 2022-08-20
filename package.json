@@ -130,8 +130,8 @@
 			{
 				"category": "Amiga",
 				"command": "amiga.exe2adf",
-				"title": "Amiga: convert EXE to ADF"	
-			}			
+				"title": "Amiga: convert EXE to ADF"
+			}
 		],
 		"languages": [
 			{
@@ -403,7 +403,7 @@
 					"command": "amiga.exe2adf",
 					"group": "1_amiga",
 					"when": "resourceExtname == '.exe'"
-				}				
+				}
 			]
 		},
 		"views": {
@@ -423,7 +423,7 @@
 						"type": "string",
 						"default": "out\\a.mingw",
 						"description": "Path to the output program (without extension), relative to the workspace."
-          },
+					},
 					"amiga.rom-paths.A500": {
 						"type": "string",
 						"default": "c:/amiga/KICK13.rom",
