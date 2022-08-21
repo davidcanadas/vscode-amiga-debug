@@ -7,7 +7,7 @@ import { createPortal } from 'preact/compat';
 import { StateUpdater, useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { binarySearch } from '../array';
 import { dataName, DisplayUnit, formatValue, getLocationText, scaleValue } from '../display';
-import { dmaTypes, DmaEvents, NR_DMA_REC_HPOS, NR_DMA_REC_VPOS, GetScreenFromBlit, DmaTypes, Blit, GetPaletteFromCustomRegs, SymbolizeAddress, DmaCyclesToCpuCycles, BlitterChannel } from '../dma';
+import { dmaTypes, DmaEvents, NR_DMA_REC_HPOS, NR_DMA_REC_VPOS, GetScreenFromBlit, DmaTypes, Blit, GetPaletteFromCustomRegs, SymbolizeAddress, DmaCyclesToCpuCycles, BlitterChannel, DmaSubTypes } from '../dma';
 import { compileFilter, IRichFilter } from '../filter';
 import { MiddleOut } from '../middleOutCompression';
 import Markdown from 'markdown-to-jsx';
@@ -26,7 +26,7 @@ import { IColumn, IColumnLocation } from './stacks';
 import { TextCache } from './textCache';
 import { setupGl } from './webgl/boxes';
 import { DmaRecord } from '../../backend/profile_types';
-import { BLTCON0Flags, BLTCON1Flags, CustomRegisters, DMACONFlags } from '../customRegisters';
+import { BlitOp, BLTCON0Flags, BLTCON1Flags, CustomRegisters, DMACONFlags } from '../customRegisters';
 import { Screen } from '../debugger/resources';
 import { GetCustomRegDoc } from '../docs';
 
@@ -204,7 +204,11 @@ const buildBlitBoxes = (MODEL: IProfileModel) => {
 	const boxes: IBox[] = [];
 
 	for(const blit of MODEL.blits) {
-		const color = dmaTypes[DmaTypes.BLITTER].subtypes[0].color; // TODO: subtype
+		const line = !!(blit.BLTCON1 & BLTCON1Flags.LINE);
+		const fill = blit.BLTCON1 & (BLTCON1Flags.EFE | BLTCON1Flags.IFE);
+		const dmaSubtype = line ? DmaSubTypes.BLITTER_LINE : fill ? DmaSubTypes.BLITTER_FILL : DmaSubTypes.BLITTER;
+		const color = dmaTypes[DmaTypes.BLITTER].subtypes[dmaSubtype].color;
+		const minterm = blit.BLTCON0 & 0xff;
 
 		const x1 = blit.cycleStart * 2 / duration; // * 2: convert from DMA cycles to CPU cycles
 		const x2 = blit.cycleEnd ? (blit.cycleEnd) * 2 / duration : 1;
@@ -218,7 +222,7 @@ const buildBlitBoxes = (MODEL: IProfileModel) => {
 				channels += '-';
 		}
 
-		const text = `Blit ${channels} ${blit.BLTSIZH * 16}x${blit.BLTSIZV}px`;
+		const text = `${line ? 'Line' : fill ? 'Fill' : minterm ? 'Blit' : 'Clear'} ${channels} ${blit.BLTSIZH * 16}x${blit.BLTSIZV}px`;
 		boxes.push({
 			column: 0,
 			row: 0,
@@ -1116,17 +1120,41 @@ const Tooltip: FunctionComponent<{
 	const BLTCON: Bit[] = [];
 	const MINTERM: Bit[] = [];
 	const BLTDAT: boolean[] = [false, false, false, false];
+	let mintermStr = '';
 	if(isBlit) {
+		const minterm = amiga.blit.BLTCON0 & 0xff;
+		mintermStr = '$' + minterm.toString(16).padStart(2, '0');
+		if(BlitOp[minterm])
+			//mintermStr += ` ${BlitOp[minterm].replace(/\[/g, '<span style="color: var(--vscode-editor-background); background: var(--vscode-editor-foreground);">').replace(/\]/g, '</span>')}`;
+			mintermStr += ` ${BlitOp[minterm].replace(/\[/g, '').replace(/\]/g, '\u0304')}`;
+			//mintermStr += ` ${BlitOp[minterm].replace(/\[/g, '<span style="box-shadow: inset 0 2px 0 currentColor;">').replace(/\]/g, '</span>')}`;
+	
 		BLTCON.push({ name: "USEA",                   enabled: !!(amiga.blit.BLTCON0 & BLTCON0Flags.USEA) });
 		BLTCON.push({ name: "USEB",                   enabled: !!(amiga.blit.BLTCON0 & BLTCON0Flags.USEB) });
 		BLTCON.push({ name: "USEC",                   enabled: !!(amiga.blit.BLTCON0 & BLTCON0Flags.USEC) });
 		BLTCON.push({ name: "USED",                   enabled: !!(amiga.blit.BLTCON0 & BLTCON0Flags.USED) });
-		BLTCON.push({ name: "DOFF",                   enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.DOFF) });
-		BLTCON.push({ name: "EFE",                    enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.EFE) });
-		BLTCON.push({ name: "IFE",                    enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.IFE) });
-		BLTCON.push({ name: "FCI",                    enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.FCI) });
-		BLTCON.push({ name: "DESC",                   enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.DESC) });
 		BLTCON.push({ name: "LINE",                   enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.LINE) });
+		if(amiga.blit.BLTCON1 & BLTCON1Flags.LINE) {
+			BLTCON.push({ name: "SIGN",                   enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.SIGN) });
+			let oct = 0;
+			switch(amiga.blit.BLTCON1 & (BLTCON1Flags.SUD | BLTCON1Flags.SUL | BLTCON1Flags.AUL) >> 2) {
+			case 0b110: oct = 0; break;
+			case 0b001: oct = 1; break;
+			case 0b011: oct = 2; break;
+			case 0b111: oct = 3; break;
+			case 0b101: oct = 4; break;
+			case 0b010: oct = 5; break;
+			case 0b000: oct = 6; break;
+			case 0b100: oct = 7; break;
+			}
+			BLTCON.push({ name: `OCT: ${oct}`, enabled: true });
+		} else {
+			BLTCON.push({ name: "DOFF",                   enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.DOFF) });
+			BLTCON.push({ name: "EFE",                    enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.EFE) });
+			BLTCON.push({ name: "IFE",                    enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.IFE) });
+			BLTCON.push({ name: "FCI",                    enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.FCI) });
+			BLTCON.push({ name: "DESC",                   enabled: !!(amiga.blit.BLTCON1 & BLTCON1Flags.DESC) });
+		}
 		MINTERM.push({ name: "ABC",                   enabled: !!(amiga.blit.BLTCON0 & BLTCON0Flags.LF7) }); //  A  B  C
 		MINTERM.push({ name: "ABC\u0304",             enabled: !!(amiga.blit.BLTCON0 & BLTCON0Flags.LF6) }); //  A  B ~C
 		MINTERM.push({ name: "AB\u0304C",             enabled: !!(amiga.blit.BLTCON0 & BLTCON0Flags.LF5) }); //  A ~B  C
@@ -1144,6 +1172,7 @@ const Tooltip: FunctionComponent<{
 			BLTDAT[BlitterChannel.A] = true;
 
 		if(!(amiga.blit.BLTCON0 & BLTCON0Flags.USEB) && (
+			(amiga.blit.BLTCON1 & BLTCON1Flags.LINE) ||
 			!!(amiga.blit.BLTCON0 & BLTCON0Flags.LF7) !== !!(amiga.blit.BLTCON0 & BLTCON0Flags.LF5) ||
 			!!(amiga.blit.BLTCON0 & BLTCON0Flags.LF6) !== !!(amiga.blit.BLTCON0 & BLTCON0Flags.LF4) ||
 			!!(amiga.blit.BLTCON0 & BLTCON0Flags.LF3) !== !!(amiga.blit.BLTCON0 & BLTCON0Flags.LF1) ||
@@ -1200,15 +1229,19 @@ const Tooltip: FunctionComponent<{
 					<dt className={styles.time}>Blitter Control</dt>
 					<dd className={styles.time}>{BLTCON.map((d) => (<div class={d.enabled ? styles.biton : styles.bitoff}>{d.name}</div>))}</dd>
 					<dt className={styles.time}>Minterm</dt>
-					<dd className={styles.time}>${(amiga.blit.BLTCON0 & 0xff).toString(16).padStart(2, '0')} {MINTERM.map((d) => (<div class={d.enabled ? styles.biton : styles.bitoff}>{d.name}</div>))}</dd>
+					<dd className={styles.time}><span dangerouslySetInnerHTML={{ __html: mintermStr }} /> {MINTERM.map((d) => (<div class={d.enabled ? styles.biton : styles.bitoff}>{d.name}</div>))}</dd>
+					{(amiga.blit.BLTCON1 & BLTCON1Flags.LINE) !== 0 && <>
+						<span class={styles.eh}>Start</span> {(amiga.blit.BLTCON0 >>> 12).toString()}
+						<span class={styles.eh}>Texture</span> {(amiga.blit.BLTCON1 >>> 12).toString()}
+					</>}
 					{[0, 1, 2, 3].filter((channel) => amiga.blit.BLTCON0 & (1 << (11 - channel)) || BLTDAT[channel]).map((channel) => (<>
 						<dt className={styles.time}>{['Source A', 'Source B', 'Source C', 'Destination'][channel]}</dt>
 						{BLTDAT[channel] ? <>
 							<dd className={styles.time}>%{amiga.blit.BLTxDAT[channel].toString(2).padStart(16, '0')}</dd>
 						</> : <>
 							<dd className={styles.time}>{SymbolizeAddress(amiga.blit.BLTxPT[channel], MODELS[frame].amiga)} 
-							{channel === 0 && (<><span class={styles.eh}>Shift</span> {(amiga.blit.BLTCON0 >>> 12).toString()}</>)}
-							{channel === 1 && (<><span class={styles.eh}>Shift</span> {(amiga.blit.BLTCON1 >>> 12).toString()}</>)}
+							{!(amiga.blit.BLTCON1 & BLTCON1Flags.LINE) && channel === 0 && (<><span class={styles.eh}>Shift</span> {(amiga.blit.BLTCON0 >>> 12).toString()}</>)}
+							{!(amiga.blit.BLTCON1 & BLTCON1Flags.LINE) && channel === 1 && (<><span class={styles.eh}>Shift</span> {(amiga.blit.BLTCON1 >>> 12).toString()}</>)}
 							<span class={styles.eh}>Modulo</span> {amiga.blit.BLTxMOD[channel]}</dd>
 							{channel === 0 && (<>
 								<dt className={styles.time}>Masks</dt>
