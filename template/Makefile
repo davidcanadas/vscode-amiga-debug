@@ -7,7 +7,7 @@ SHELL = cmd.exe
 forward-to-backward = $(subst /,\,$1)
 
 subdirs := $(wildcard */)
-code_subdirs:= $(filter-out resources/, $(filter-out out/,$(subdirs)))
+code_subdirs:= $(filter-out resources/, $(filter-out $(programFolder)/,$(subdirs)))
 VPATH = $(subdirs)
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(code_subdirs)))
 cpp_objects := $(addprefix obj/$(targetName)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
