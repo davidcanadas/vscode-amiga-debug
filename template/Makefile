@@ -22,6 +22,7 @@ objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
+program = out/a
 OUT = $(call forward-to-backward,$(program))
 CC = m68k-amiga-elf-gcc
 VASM = vasmm68k_mot_win32.exe
