@@ -22,7 +22,7 @@ objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
-OUT = $(program)
+OUT = $(call forward-to-backward,$(program))
 CC = m68k-amiga-elf-gcc
 VASM = vasmm68k_mot_win32.exe
 
@@ -35,7 +35,7 @@ VASMFLAGS = $(vasmExtraOptions) -m68000 -Felf -opt-fconst -nowarn=62 -I. -I$(ext
 all: $(OUT).exe
 
 $(OUT).exe: $(OUT).elf
-	$(info Elf2Hunk $(OUT).exe)
+	$(info Elf2Hunk $(program).exe)
 	@elf2hunk $(OUT).elf $(OUT).exe -s
 
 $(OUT).elf: $(objects)

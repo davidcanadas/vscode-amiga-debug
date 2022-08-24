@@ -14,7 +14,8 @@
                 "targetName=Release",
                 "ccExtraOptions=-gdwarf-3 -Ofast -DDEBUG",
                 "vasmExtraOptions=-dwarf=3 -DDEBUG",
-                "programFolder=${command:amiga.programFolder}"
+                "programFolder=${command:amiga.programFolder}",
+                "program=${config:amiga.program}"
             ],
             "options": {
                 "cwd": "${workspaceRoot}",

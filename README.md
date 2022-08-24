@@ -23,7 +23,9 @@ Here's a video showing off all the new features of v1.1, including the frame pro
 0. Install the extension from the Visual Studio Code Marketplace
 1. Create a new empty project folder with `File > Open Folder...`
 2. From the command palette <kbd>Ctrl+Shift+P</kbd> select `Amiga: Init Project`
-3. (optional, but recommended) Open `.vscode/launch.json` and point `"kickstart"` to your *Kickstart 1.3* ROM
+3. (optional, but recommended)
+   - either: open settings <kbd>Ctrl+,</kbd> and under `Extensions` > `Amiga C/C++ Compile, Debug & Profile` point `Rom-paths: A500` to your *Kickstart 1.3* ROM
+   - or: open `.vscode/launch.json` and point `"kickstart"` to your *Kickstart 1.3* ROM
 3. Hit <kbd>F5</kbd> to build and run a minimal sample project
 4. If you prefer C++ instead of C, just rename `main.c` to `main.cpp`
 
@@ -55,6 +57,12 @@ Here's a video showing off all the new features of v1.1, including the frame pro
 - WinUAE:
   - <kbd>^</kbd> = single step, <kbd>Pause</kbd> = pause/resume <kbd>Page-up</kbd> = warp mode
   - all necessary options are already configured for Amiga 500, Kickstart 1.3 (for debugging), if you want to change some things (resolution, window size, etc.) just go into the `Configurations` tab, select `default`, and hit `Save`
+- some nifty coding helpers in the command palette <kbd>Ctrl+Shift+P</kbd>
+  - `Open Gradient Master`: opens the Deadliner's The Amiga Gradient Master tool to assist you creating color gradients for Copperlists).
+  - `Open Image Tool` opens the Deadliner's Image Tool to assist you converting images to different Amiga formats.
+  - `Open Color Reducer` opens the Deadliner's Color Reducer tool to assist you reducing the number of colors in images in a smart manner.
+  - `Open BLTCON Cheat Sheet`: opens the Deadliner's BLTCON Cheat Sheet tool that helps you designing Blitter operations.
+  - `Open Amiga Hardware Reference Manual`: opens the Amiga Hardware Reference Manual TOC hosted at amigadev.elowar.com.
 
 ## Supported Amiga Models
 
