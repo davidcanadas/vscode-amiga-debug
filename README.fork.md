@@ -7,8 +7,8 @@ This document is a companion of the original vscode-amiga-debug [README.md](READ
 * VASM assembler with debugging support:
     * GAS keeps the `.s` extension; VASM uses the `.asm` extension.
     * VASM has been modified to provide valid DWARF section names to make the extension debugger to work.
-    * The assembly launchage provider has been updated to validate assembly sources against either GAS or VASM depending on the source code file extensions.
-    * Syntax hightlighting, symbol search and error squiggles support.
+    * The assembly language provider has been updated to validate assembly sources against either GAS or VASM depending on the source code file extensions.
+    * Syntax highlighting, symbol search and error squiggles support.
     * VASM official site: http://sun.hasenbraten.de/vasm/.
     * Modified VASM: https://github.com/davidcanadas/vasm-m68k-mot-win32. Version 1.9.
 * Support for multiple build targets:
