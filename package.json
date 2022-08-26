@@ -29,7 +29,6 @@
 		"onCommand:amiga.externalResources.colorReducer",
 		"onCommand:amiga.externalResources.bltconCheatSheet",
 		"onCommand:amiga.externalResources.amigaHRM",
-		"onCommand:amiga.exe2adf",
 		"onCustomEditor:amiga.profile",
 		"onCustomEditor:amiga.objdump",
 		"onCustomEditor:amiga.savestate",
