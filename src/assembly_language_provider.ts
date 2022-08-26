@@ -62,7 +62,7 @@ class SourceContext {
 		try {
 			fs.unlinkSync(tmp);
 		} catch(e) {}
-		let cmd: string, cmdParams: string[], spawnParams: object, stderr : string[], errorRegExp : RegExp;
+		let cmd: string, cmdParams: string[], spawnParams: object;
 		if (this.fileName.endsWith('.s')) {
 			//	Spawn the GNU Assembler to validate the file.
 			cmd = path.join(SourceContext.extensionPath, "bin/opt/bin/m68k-amiga-elf-as.exe");
@@ -84,8 +84,7 @@ class SourceContext {
 			};
 			const as = childProcess.spawnSync(cmd, cmdParams, spawnParams);
 			const stdout = as.stdout.toString().replace(/\r/g, '').split('\n');
-			stderr = as.stderr.toString().replace(/\r/g, '').split('\n');
-			errorRegExp = /{standard input}:([0-9]+): (.*)$/;
+			const stderr = as.stderr.toString().replace(/\r/g, '').split('\n');
 
 			// get labels
 			this.labels.clear();
@@ -95,6 +94,17 @@ class SourceContext {
 					this.labels.set(match[2], parseInt(match[1]) - 1);
 				}
 			}			
+
+			// get error/warning messages
+			const errors: vscode.Diagnostic[] = [];
+			for(const line of stderr) {
+				const match = line.match(/{standard input}:([0-9]+): (.*)$/);
+				if(match) {
+					console.log("stderr", match[1], match[2]);
+					errors.push(new vscode.Diagnostic(new vscode.Range(parseInt(match[1]) - 1, 0, parseInt(match[1]) - 1, 10000), match[2]));
+				}
+			}
+			this.diagnosticCollection.set(vscode.Uri.file(this.fileName), errors);
 		}
 		else
 		if (this.fileName.endsWith('.asm')) {
@@ -127,46 +137,71 @@ class SourceContext {
 			];
 			spawnParams = {};
 			const as = childProcess.spawnSync(cmd, cmdParams, spawnParams);
-			const stdout = fs.readFileSync(symTmp).toString().replace(/\r/g, '').split('\n');
-			stderr = as.stderr.toString().replace(/\r/g, '').split('\n');
-			errorRegExp = /in line ([0-9]+)[^"]+"[^"]+":\s*(.*)+/;			
+			const stderr = as.stderr.toString().replace(/\r/g, '').split('\n');
+			try {
+				const stdout = fs.readFileSync(symTmp).toString().replace(/\r/g, '').split('\n');
 
-			// get labels
-			this.labels.clear();
-			let readingSymbols = false;
-			const symbolMap = new Map< string, string >();
-			for(const line of stdout) {
-				if (readingSymbols) {
-					if (line === '')
-						break;
-					const match = line.match(/([^\s]+)\s+([0-9]+:[0-9]+)/);
+				// get labels
+				this.labels.clear();
+				let readingSymbols = false;
+				const symbolMap = new Map< string, string >();
+				for(const line of stdout) {
+					if (readingSymbols) {
+						if (line === '')
+							break;
+						const match = line.match(/([^\s]+)\s+([0-9]+:[0-9]+)/);
+						if (match) {
+							symbolMap[match[2]] = match[1];
+						}
+					}
+					else
+					if (line === 'Symbols by name:') {
+						readingSymbols = true;
+					}
+				}
+				for(const line of stdout) {
+					const match = line.match(/([0-9]+:[0-9]+)\s+[0-9A-fa-f]+\s+([0-9]+):/);
 					if (match) {
 						symbolMap[match[2]] = match[1];
 					}
 				}
-				else
-				if (line === 'Symbols by name:') {
-					readingSymbols = true;
-				}
-			}
-			for(const line of stdout) {
-				const match = line.match(/([0-9]+:[0-9]+)\s+[0-9A-fa-f]+\s+([0-9]+):/);
-				if (match) {
-					this.labels.set(symbolMap[match[1]] as string, parseInt(match[2]) - 1);
-				}
-			}
-		}			
+			} catch(e) {}
 
-		// get error/warning messages
-		const errors: vscode.Diagnostic[] = [];
-		for(const line of stderr) {
-			const match = line.match(errorRegExp);
-			if(match) {
-				console.log("stderr", match[1], match[2]);
-				errors.push(new vscode.Diagnostic(new vscode.Range(parseInt(match[1]) - 1, 0, parseInt(match[1]) - 1, 10000), match[2]));
+			// get error/warning messages
+			const errors: vscode.Diagnostic[] = [];
+			for(const line of stderr) {
+				const match = line.match(/in line ([0-9]+)[^"]+"[^"]+":\s*(.*)+/);
+				if(match) {
+					console.log("stderr", match[1], match[2]);
+					errors.push(new vscode.Diagnostic(new vscode.Range(parseInt(match[1]) - 1, 0, parseInt(match[1]) - 1, 10000), match[2]));
+				}
+				else {
+					const matchRef = line.match(/from line ([0-9]+)/);
+					if(matchRef) { // Fix back-referencing errors.
+						console.log("backref", matchRef[1]);
+						errors[errors.length - 1].range = new vscode.Range(parseInt(matchRef[1]) - 1, 0, parseInt(matchRef[1]) - 1, 10000);
+
+						//	Remove duplicates (multiple back-references to the same macro store duplicates).
+						const lastError = errors[errors.length - 1];
+						for (let i = errors.length - 2; i >= 0; --i)
+						{
+							if ((errors[i].range.start.line === lastError.range.start.line) && (errors[i].range.end.line === lastError.range.end.line) && (errors[i].message === lastError.message)) {
+								errors.pop();
+								break;
+							}
+						}
+					}
+				}
 			}
+			this.diagnosticCollection.set(vscode.Uri.file(this.fileName), errors);			
+
+			try {
+				fs.unlinkSync(inFile);
+			} catch(e) {}
+			try {
+				fs.unlinkSync(symTmp);
+			} catch(e) {}
 		}
-		this.diagnosticCollection.set(vscode.Uri.file(this.fileName), errors);
 
 		// get cycles from disassembly
 		this.cycles.clear();
