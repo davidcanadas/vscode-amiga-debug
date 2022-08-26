@@ -2,7 +2,6 @@
 
 This document is a companion of the original vscode-amiga-debug [README.md](README.md) file that gives additional information regarding this fork.
 
-
 ## Additional features
 
 * VASM assembler with debugging support:
