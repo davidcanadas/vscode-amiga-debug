@@ -151,9 +151,7 @@
 					"Amiga Assembly"
 				],
 				"extensions": [
-					".s",
-					".i",
-					".asm"
+					".s"
 				],
 				"configuration": "./amiga.assembly-language-configuration.json"
 			},
