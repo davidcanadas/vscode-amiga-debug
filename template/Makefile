@@ -23,6 +23,9 @@ objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
 program = out/a
+ccExtraOptions = -Ofast -DNDEBUG
+vasmExtraOptions = -DNDEBUG
+
 OUT = $(call forward-to-backward,$(program))
 CC = m68k-amiga-elf-gcc
 VASM = vasmm68k_mot_win32.exe
