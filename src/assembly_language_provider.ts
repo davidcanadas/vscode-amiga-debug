@@ -6,6 +6,8 @@ import * as os from 'os';
 import { Disassemble } from './backend/profile';
 import { GetCycles } from './client/68k';
 import { GetCpuDoc, GetCpuInsns, GetCpuName } from './client/docs';
+import { stringify } from 'querystring';
+import { arrayBuffer } from 'stream/consumers';
 
 enum TokenTypes {
 	function,
@@ -106,17 +108,10 @@ class SourceContext {
 			}
 			this.diagnosticCollection.set(vscode.Uri.file(this.fileName), errors);
 		}
-		else
-		if (this.fileName.endsWith('.asm')) {
+		else if (this.fileName.endsWith('.asm')) {
 			//	Spawn VASM to validate the file. VASM does not accept input from the stdin, hence we need to create a temporary file for it.
 			const inFile = path.join(os.tmpdir(), `amiga-as-${dateString}.s.tmp`);
 			const symTmp = path.join(os.tmpdir(), `amiga-as-${dateString}.l.tmp`);
-			try {
-				fs.unlinkSync(inFile);
-			} catch(e) {}
-			try {
-				fs.unlinkSync(symTmp);
-			} catch(e) {}
 			fs.writeFileSync (inFile, this.text);
 			cmd = path.join(SourceContext.extensionPath, "bin/vasmm68k_mot_win32.exe");
 			cmdParams = [
@@ -138,20 +133,21 @@ class SourceContext {
 			spawnParams = {};
 			const as = childProcess.spawnSync(cmd, cmdParams, spawnParams);
 			const stderr = as.stderr.toString().replace(/\r/g, '').split('\n');
+			const textLines = this.text.replace(/\r/g, '').split('\n');
 			try {
 				const stdout = fs.readFileSync(symTmp).toString().replace(/\r/g, '').split('\n');
 
 				// get labels
 				this.labels.clear();
 				let readingSymbols = false;
-				const symbolMap = new Map< string, string >();
+				const symbolNames : string[] = [];
 				for(const line of stdout) {
 					if (readingSymbols) {
 						if (line === '')
 							break;
 						const match = line.match(/([^\s]+)\s+([0-9]+:[0-9]+)/);
 						if (match) {
-							symbolMap[match[2]] = match[1];
+							symbolNames.push(match[1]);
 						}
 					}
 					else
@@ -159,35 +155,58 @@ class SourceContext {
 						readingSymbols = true;
 					}
 				}
-				for(const line of stdout) {
-					const match = line.match(/([0-9]+:[0-9]+)\s+[0-9A-fa-f]+\s+([0-9]+):/);
+				
+				const symRegExp = new RegExp('^\\s*(' + symbolNames.join('|') + ')[:\\s]{1}');
+				let lineCount = 0;
+				for(const line of textLines)
+				{
+					const match = line.match(symRegExp);
 					if (match) {
-						symbolMap[match[2]] = match[1];
+						this.labels.set(match[1], lineCount);
 					}
+					++lineCount;
 				}
 			} catch(e) {}
 
 			// get error/warning messages
 			const errors: vscode.Diagnostic[] = [];
 			for(const line of stderr) {
+				if ('' === line)
+					continue;
+
 				const match = line.match(/in line ([0-9]+)[^"]+"[^"]+":\s*(.*)+/);
 				if(match) {
-					console.log("stderr", match[1], match[2]);
-					errors.push(new vscode.Diagnostic(new vscode.Range(parseInt(match[1]) - 1, 0, parseInt(match[1]) - 1, 10000), match[2]));
+					errors.push(new vscode.Diagnostic(new vscode.Range(parseInt(match[1]) - 1, 0, parseInt(match[1]) - 1, 10000), match[2], line.startsWith('warning') ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error));
 				}
 				else {
-					const matchRef = line.match(/from line ([0-9]+)/);
-					if(matchRef) { // Fix back-referencing errors.
-						console.log("backref", matchRef[1]);
-						errors[errors.length - 1].range = new vscode.Range(parseInt(matchRef[1]) - 1, 0, parseInt(matchRef[1]) - 1, 10000);
+					const match = line.match(/(undefined symbol <([^>]+)>)/);
+					if (match) {
+						let lineNo = 0;
+						for(const srcLine of textLines) { // Error message comes without the corresponding line, search the source code for it.
+							if (srcLine.match('[\\,\\s(.-]' + match[2] + '[\\,\\s;\\*).-]?')) {
+								errors.push(new vscode.Diagnostic(new vscode.Range(lineNo, 0, lineNo, 10000), match[1]));
+							}
+							++lineNo;
+						}
+					}
+					else {
+						const match = line.match(/from line ([0-9]+)/);
+						if(match) { // Fix back-referencing errors.
+							errors[errors.length - 1].range = new vscode.Range(parseInt(match[1]) - 1, 0, parseInt(match[1]) - 1, 10000);
 
-						//	Remove duplicates (multiple back-references to the same macro store duplicates).
-						const lastError = errors[errors.length - 1];
-						for (let i = errors.length - 2; i >= 0; --i)
-						{
-							if ((errors[i].range.start.line === lastError.range.start.line) && (errors[i].range.end.line === lastError.range.end.line) && (errors[i].message === lastError.message)) {
-								errors.pop();
-								break;
+							//	Remove duplicates (multiple back-references to the same macro store duplicates).
+							const lastError = errors[errors.length - 1];
+							for (let i = errors.length - 2; i >= 0; --i)
+							{
+								if ((errors[i].range.start.line === lastError.range.start.line) && (errors[i].range.end.line === lastError.range.end.line) && (errors[i].message === lastError.message)) {
+									errors.pop();
+									break;
+								}
+							}
+						} else {
+							const match = line.match(/(error|warning)\s+[0-9]+:\s*(.*)+/);
+							if (match) { // Line-less errors, will show in line 1.
+								errors.push(new vscode.Diagnostic(new vscode.Range(0, 0, 0, 10000), match[2], line.startsWith('warning') ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error));
 							}
 						}
 					}
@@ -386,7 +405,7 @@ export class AmigaAssemblyLanguageProvider implements vscode.DocumentSymbolProvi
 	// HoverProvider
 	public provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
 		const word = document.getText(document.getWordRangeAtPosition(position));
-		console.log(word);
+		//console.log(word);
 		const doc = GetCpuDoc(word);
 		if(doc)
 			return new vscode.Hover(new vscode.MarkdownString(doc));
@@ -407,7 +426,7 @@ export class AmigaAssemblyLanguageProvider implements vscode.DocumentSymbolProvi
 	public provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Location | vscode.Location[] | vscode.LocationLink[]> {
 		const context = this.getSourceContext(document.fileName);
 		const word = document.getText(document.getWordRangeAtPosition(position));
-		console.log(word);
+		//console.log(word);
 		const line = context.labels.get(word);
 		if(line === undefined)
 			return undefined;
