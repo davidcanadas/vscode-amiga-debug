@@ -4,13 +4,6 @@ This document is a companion of the original vscode-amiga-debug [README.md](READ
 
 ## Additional features
 
-* VASM assembler with debugging support:
-    * GAS keeps the `.s` extension; VASM uses the `.asm` extension.
-    * VASM has been modified to provide valid DWARF section names to make the extension debugger to work.
-    * The assembly language provider has been updated to validate assembly sources against either GAS or VASM depending on the source code file extensions.
-    * Syntax highlighting, symbol search and error squiggles support.
-    * VASM official site: http://sun.hasenbraten.de/vasm/.
-    * Modified VASM: https://github.com/davidcanadas/vasm-m68k-mot-win32. Version 1.9.
 * Support for multiple build targets:
     * Release: default target. Optimizations enabled, debuggable (when optimizations allow to). `DEBUG` macro defined for GCC, GAS and VASM.
     * Debug: Optimizations disabled, slower but fully debuggable. `DEBUG` macro defined for GCC, GAS and VASM.
@@ -19,6 +12,13 @@ This document is a companion of the original vscode-amiga-debug [README.md](READ
 
 ## Features contributed to the original project
 
+* [1.5.5] VASM assembler with debugging support:
+    * GAS keeps the `.s` extension; VASM uses the `.asm` extension.
+    * VASM has been modified to provide valid DWARF section names to make the extension debugger to work.
+    * The assembly language provider has been updated to validate assembly sources against either GAS or VASM depending on the source code file extensions.
+    * Syntax highlighting, symbol search and error squiggles support.
+    * VASM official site: http://sun.hasenbraten.de/vasm/.
+    * Modified VASM: https://github.com/davidcanadas/vasm-m68k-mot-win32. Version 1.9.
 * [1.5.4] Paths to the Kickstart ROMs can be configured from the VSCode settings.
 * [1.5.4] Program name can be configured from the VSCode settings.
 * [1.5.4] exe2adf support:
