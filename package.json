@@ -1,10 +1,10 @@
 {
-	"name": "amiga-debug",
-	"displayName": "Amiga C/C++ Compile, Debug & Profile",
-	"publisher": "BartmanAbyss",
+	"name": "amiga-debug-arch",
+	"displayName": "Amiga C/C++ Compile, Debug & Profile (Architect fork)",
+	"publisher": "davidcanadasmazo",
 	"description": "One-stop VS Code Extension to compile, debug and profile Amiga C/C++ programs compiled by the bundled gcc 12.1 with the bundled WinUAE (Windows only)",
 	"repository": {
-		"url": "https://github.com/BartmanAbyss/vscode-amiga-debug"
+		"url": "https://github.com/davidcanadas/vscode-amiga-debug"
 	},
 	"version": "1.5.4",
 	"license": "GPL-3.0-or-later",
@@ -132,7 +132,7 @@
 				"category": "Amiga",
 				"command": "amiga.exe2adf",
 				"title": "Amiga: Convert EXE to ADF"
-			}			
+			}
 		],
 		"languages": [
 			{
@@ -421,7 +421,7 @@
 					"command": "amiga.exe2adf",
 					"group": "1_amiga",
 					"when": "resourceExtname == '.exe'"
-				}				
+				}
 			]
 		},
 		"views": {
@@ -456,7 +456,12 @@
 						"type": "string",
 						"default": "c:/amiga/KICK31.rom",
 						"description": "Path to the Kickstart ROM for A4000 models."
-          			}
+					},
+					"amiga.shrinkler.options": {
+						"type": "string",
+						"default": "-h -f dff180 -9 -t Decrunching...",
+						"description": "Additional arguments when packing Shrinkler targets."
+					}
 				}
 			}
 		]
@@ -475,7 +480,7 @@
 		"@types/node": "^16.11.7",
 		"@types/pubsub-js": "^1.8.0",
 		"@types/react-highlight-words": "^0.16.1",
-		"@types/react-tabs": "^2.3.1",
+		"@types/react-tabs": "^2.3.4",
 		"@types/vscode": "^1.46",
 		"@typescript-eslint/eslint-plugin": "^5.3.1",
 		"@typescript-eslint/parser": "^5.3.1",
@@ -495,9 +500,11 @@
 		"preact-virtual-list": "^0.3.1",
 		"pubsub-js": "^1.8.0",
 		"raw-loader": "^4.0.1",
+		"react": "npm:@preact/compat",
+		"react-dom": "npm:@preact/compat",
 		"react-highlight-words": "^0.17.0",
 		"react-split": "2.0.7",
-		"react-tabs": "^3.1.1",
+		"react-tabs": "^4.2.1",
 		"source-map-loader": "^4.0.0",
 		"style-loader": "^3.3.1",
 		"svg-inline-loader": "^0.8.2",
@@ -508,8 +515,8 @@
 		"typescript": "^4.4.4",
 		"vscode-debugadapter-testsupport": "^1.40.3",
 		"vscode-test": "^1.3.0",
-		"webpack": "^5.64.0",
-		"webpack-cli": "^4.9.1"
+		"webpack": "^5.74.0",
+		"webpack-cli": "^4.10.0"
 	},
 	"dependencies": {
 		"vscode-cpptools": "^5.0.0",
