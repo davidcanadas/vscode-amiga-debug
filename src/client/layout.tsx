@@ -101,7 +101,7 @@ export const CpuProfileLayout: FunctionComponent<{}> = (_) => {
 	}
 
 	const [leftTab, setLeftTab] = useState(process.env.NODE_ENV === 'development' ? LeftTab.screen : LeftTab.profiler/*profiler*//*assembly*/);
-	const [rightTab, setRightTab] = useState(process.env.NODE_ENV === 'development' ? RightTab.memory : RightTab.copper);
+	const [rightTab, setRightTab] = useState(/*process.env.NODE_ENV === 'development' ? RightTab.memory :*/ RightTab.copper);
 
 	/*useEffect(() => {
 		const token = PubSub.subscribe('showBlit', () => setLeftTab(LeftTab.blitter));
@@ -109,7 +109,7 @@ export const CpuProfileLayout: FunctionComponent<{}> = (_) => {
 	}, []);*/
 
 	const onClickFrame = useCallback((event: JSX.TargetedMouseEvent<HTMLImageElement>) => {
-		const fr = parseInt(event.currentTarget.attributes.getNamedItem('data').nodeValue);
+		const fr = parseInt(event.currentTarget.getAttribute('data'));
 		// build models on demand. memory, copper, blits have already been filled by client.tsx
 		if(!MODELS[fr].nodes)
 			MODELS[fr] = { ...MODELS[fr], ...buildModel(PROFILES[fr]) };
@@ -208,10 +208,10 @@ export const CpuProfileLayout: FunctionComponent<{}> = (_) => {
 						<Tab>Custom Registers</Tab>
 						<Tab>Memory</Tab>
 					</TabList>
-					<TabPanel style={{ overflow: 'auto' }}>
+					<TabPanel style={rightTab === RightTab.copper ? { overflow: 'hidden', flexGrow: 1, display: 'flex', flexDirection: 'column' } : {}}>
 						<CopperView frame={frame} time={time} />
 					</TabPanel>
-					<TabPanel style={{ overflow: 'auto' }}>
+					<TabPanel style={rightTab === RightTab.customRegs ? { overflow: 'auto' } : {}}>
 						<CustomRegsView frame={frame} time={time} setTime={setTime} />
 					</TabPanel>
 					<TabPanel style={rightTab === RightTab.memory ? { overflow: 'hidden', flexGrow: 1, display: 'flex', flexDirection: 'column' } : {  overflow: 'auto' }}>

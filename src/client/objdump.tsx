@@ -1,12 +1,9 @@
-import { Component, FunctionComponent, JSX } from 'preact';
+import { Component, FunctionComponent, JSX, Ref } from 'preact';
 import { StateUpdater, useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { createPortal } from 'preact/compat';
 import { Cycles, GetCycles, GetJump, JumpType } from "./68k";
 import { DropdownComponent, DropdownOptionProps } from './dropdown';
 import { Icon } from './icons';
-import * as ChevronDown from './icons/arrow-down.svg';
-import * as ChevronUp from './icons/arrow-up.svg';
-import * as Close from './icons/close.svg';
 import * as SymbolMethod from './icons/symbol-method.svg';
 import { IProfileModel } from './model';
 import styles from './objdump.module.css';
@@ -20,6 +17,7 @@ import Highlighter from 'react-highlight-words';
 import { resolvePath } from './pathResolve';
 import { GetCpuDoc } from './docs';
 import Markdown from 'markdown-to-jsx';
+import { FindCallback, Find } from './find';
 
 // messages from webview to vs code
 export interface IOpenDocumentMessageObjview {
@@ -239,16 +237,17 @@ export const ObjdumpView: FunctionComponent<{
 
 	const [curRow, setCurRow] = useState(0);
 
+	// Find
 	const [find, setFind] = useState<{ text: string; internal: boolean }>({ text: '', internal: true });
 	const [curFind, setCurFind] = useState(0);
-	const findRef = useRef<HTMLDivElement>();
+	const findRef = useRef<FindCallback>();
 	const findResult = useMemo(() => {
 		console.time("findResult");
 		const result: number[] = [];
 		if(find.text.length > 0) {
 			if(find.internal) {
 				content.forEach((line, index) => {
-					if(line.text.includes(find.text))
+					if(line.text.toLowerCase().includes(find.text.toLowerCase()))
 						result.push(index);
 				});
 			} else {
@@ -449,6 +448,7 @@ export const ObjdumpView: FunctionComponent<{
 		</svg>);
 	}, [content, rowHeight, pc]);
 
+	// scroller
 	const listRef = useRef<Component>();
 	const [scroller, setScroller] = useState<Scrollable>(null);
 	useEffect(() => {
@@ -498,16 +498,11 @@ export const ObjdumpView: FunctionComponent<{
 		const listener = (evt: KeyboardEvent) => {
 			if((evt.key === 'f' && evt.ctrlKey) || evt.key === 'F3') {
 				// open search bar
-				findRef.current.classList.remove(styles.find_hidden);
-				findRef.current.classList.add(styles.find_visible);
-				findRef.current.getElementsByTagName('input')[0].select();
+				findRef.current('open');
 				evt.preventDefault();
 			} else if(evt.key === 'Escape') {
 				// close search bar
-				findRef.current.getElementsByTagName('input')[0].blur();
-				findRef.current.classList.remove(styles.find_visible);
-				findRef.current.classList.add(styles.find_hidden);
-				setFind({ text: '', internal: true });
+				findRef.current('close');
 				evt.preventDefault();
 			}
 			if(frame === -1) {
@@ -543,10 +538,14 @@ export const ObjdumpView: FunctionComponent<{
 				evt.preventDefault();
 			}
 		};
-		document.addEventListener('keydown', listener);
-		return () => document.removeEventListener('keydown', listener);
-	}, [content, findRef, setFind]);
+		// make list accept keyboard events
+		(listRef.current.base as HTMLElement).tabIndex = -1;
+		(listRef.current?.base as HTMLElement)?.focus();
+		listRef.current?.base?.addEventListener('keydown', listener);
+		return () => listRef.current?.base?.removeEventListener('keydown', listener);
+	}, []);
 
+	// messages
 	useEffect(() => {
 		if(frame === -1) {
 			const listener = (e: MessageEvent) => {
@@ -556,10 +555,7 @@ export const ObjdumpView: FunctionComponent<{
 					console.log("Message", type, body);
 					const loc = `${body.file}:${body.line}`;
 					// open search bar
-					findRef.current.classList.remove(styles.find_hidden);
-					findRef.current.classList.add(styles.find_visible);
-					findRef.current.getElementsByTagName('input')[0].select();
-					findRef.current.getElementsByTagName('input')[0].value = loc;
+					findRef.current('open', loc);
 					setFind({ text: loc, internal: false });
 					break;
 				case 'fileChanged':
@@ -588,12 +584,11 @@ export const ObjdumpView: FunctionComponent<{
 		}
 	}, [content, scroller]);
 
-	const onClickContainer = useCallback((evt: MouseEvent) => {
+	const onClickContainer = useCallback((evt: JSX.TargetedMouseEvent<HTMLElement>) => {
 		if(frame === -1) {
-			const elem = evt.srcElement as HTMLElement;
-			for(let elem = evt.srcElement as HTMLElement; elem; elem = elem.parentElement) {
-				if(elem.attributes['data-row']) {
-					const row = parseInt(elem.attributes['data-row'].value);
+			for(let elem = evt.target as HTMLElement; elem; elem = elem.parentElement) {
+				if(elem.getAttribute('data-row')) {
+					const row = parseInt(elem.getAttribute('data-row'));
 					setCurRow(row);
 					return;
 				}
@@ -601,71 +596,46 @@ export const ObjdumpView: FunctionComponent<{
 		}
 	}, []);
 
-	const onFindPrev = useCallback(() => {
-		if(findResult.length) {
-			const n = (curFind + findResult.length - 1) % findResult.length;
-			setCurFind(n);
-			setCurRow(findResult[n]);
+	const findCallback = useCallback((action: string, text?: string) => {
+		if(action === 'prev') {
+			if(findResult.length) {
+				const n = (curFind + findResult.length - 1) % findResult.length;
+				setCurFind(n);
+				setCurRow(findResult[n]);
+			}
+		} else if(action === 'next') {
+			if(findResult.length) {
+				const n = (curFind + 1) % findResult.length;
+				setCurFind(n);
+				setCurRow(findResult[n]);
+			}
+		} else {
+			setFind({ text: text ?? '', internal: true });
+			if(action === 'close')
+				(listRef.current?.base as HTMLElement)?.focus();
 		}
-	}, [curFind, findResult]);
-	const onFindNext = useCallback(() => {
-		if(findResult.length) {
-			const n = (curFind + 1) % findResult.length;
-			setCurFind(n);
-			setCurRow(findResult[n]);
-		}
-	}, [curFind, findResult]);
-	const onFindClick = useCallback((evt: Event) => {
-		(evt.target as HTMLInputElement).select();
-	}, []);
-	const onFindPaste = useCallback((evt: Event) => {
-		const find = (evt.target as HTMLInputElement).value;
-		setFind({ text: find, internal: true });
-	}, [setFind]);
-	const onFindKeyUp = useCallback((evt: KeyboardEvent) => {
-		if(evt.key === 'Enter' || evt.key === 'Escape')
-			return;
-		const find = (evt.target as HTMLInputElement).value;
-		setFind({ text: find, internal: true });
-	}, [setFind]);
-	const onFindKeyDown = useCallback((evt: KeyboardEvent) => {
-		if(evt.key === 'Enter')
-			evt.shiftKey ? onFindPrev() : onFindNext();
-		if(evt.key !== 'Escape')
-			evt.stopPropagation();
-	}, [onFindPrev, onFindNext]);
-	const onFindClose = useCallback(() => {
-		findRef.current.classList.remove(styles.find_visible);
-		findRef.current.classList.add(styles.find_hidden);
-		setFind({ text: '', internal: true });
-	}, [findRef]);
+	}, [setFind, listRef.current, curFind, findResult]);
 	
 	return <>
 		<div class={styles.wrapper}>
-			<div ref={findRef} class={[styles.find, styles.find_hidden].join(' ')} style={{ visibility: '' }}>
-				<input placeholder="Find" onClick={onFindClick} onPaste={onFindPaste} onKeyUp={onFindKeyUp} onKeyDown={onFindKeyDown}></input>
-				<span class={styles.find_result}>{findResult.length > 0 ? `${curFind % findResult.length + 1} of ${findResult.length}` : 'No results'}</span>
-				<button class={styles.button} onMouseDown={onFindPrev} disabled={findResult.length === 0} type="button" title="Previous match (Shift+Enter)" dangerouslySetInnerHTML={{__html: ChevronUp}} />
-				<button class={styles.button} onMouseDown={onFindNext} disabled={findResult.length === 0} type="button" title="Next match (Enter)" dangerouslySetInnerHTML={{__html: ChevronDown}} />
-				<button class={styles.button} onMouseDown={onFindClose} type="button" title="Close (Escape)" dangerouslySetInnerHTML={{__html: Close}} />
-			</div>
-			{regs?.length && <div class={styles.registers}>
+			<Find ref={findRef} curFind={curFind} findResultLength={findResult.length} callback={findCallback}  />
+			{regs?.length > 0 && <div class={styles.registers}>
 					{[0, 1, 2, 3, 4, 5, 6, 7].map((_, i: number) => <>
 						D{i}: <a href="#" onClick={() => setMemoryAddr(regs[Register.D0 + i])}>${regs[Register.D0 + i].toString(16).padStart(8, '0')}</a>&nbsp;
 						A{i}: <a href="#" onClick={() => setMemoryAddr(regs[Register.A0 + i])}>${regs[Register.A0 + i].toString(16).padStart(8, '0')}</a>
 					<br/></>)}
 					SR: ${regs[Register.SR].toString(16).padStart(4, '0')}&nbsp;&nbsp;&nbsp;
-					<span class={(regs[Register.SR] & (1 << 15)) ? styles.sr_on : styles.sr_off}>T</span>
-					<span class={(regs[Register.SR] & (1 << 14)) ? styles.sr_on : styles.sr_off}>T</span>
-					<span class={(regs[Register.SR] & (1 << 13)) ? styles.sr_on : styles.sr_off}>S</span>
-					<span class={(regs[Register.SR] & (1 << 12)) ? styles.sr_on : styles.sr_off}>M</span>
-					<span class={styles.sr_off}>-</span>IP{(regs[Register.SR] & 0b111) >>> 8}
+					<span class={(regs[Register.SR] & (1 << 15)) ? styles.sr_on : styles.sr_off} title='Trace Enable'>T</span>
+					<span class={(regs[Register.SR] & (1 << 14)) ? styles.sr_on : styles.sr_off} title='Trace Enable'>T</span>
+					<span class={(regs[Register.SR] & (1 << 13)) ? styles.sr_on : styles.sr_off} title='Supervisor/User State'>S</span>
+					<span class={(regs[Register.SR] & (1 << 12)) ? styles.sr_on : styles.sr_off} title='Master/Interrupt State'>M</span>
+					<span class={styles.sr_off}>-</span><span class={styles.sr_on} title='Interrupt Priority Mask'>IP{(regs[Register.SR] & 0b111) >>> 8}</span>
 					<span class={styles.sr_off}>---</span>
-					<span class={(regs[Register.SR] & (1 << 4)) ? styles.sr_on : styles.sr_off}>X</span>
-					<span class={(regs[Register.SR] & (1 << 3)) ? styles.sr_on : styles.sr_off}>N</span>
-					<span class={(regs[Register.SR] & (1 << 2)) ? styles.sr_on : styles.sr_off}>Z</span>
-					<span class={(regs[Register.SR] & (1 << 1)) ? styles.sr_on : styles.sr_off}>V</span>
-					<span class={(regs[Register.SR] & (1 << 0)) ? styles.sr_on : styles.sr_off}>C</span>
+					<span class={(regs[Register.SR] & (1 << 4)) ? styles.sr_on : styles.sr_off} title='Extend'>X</span>
+					<span class={(regs[Register.SR] & (1 << 3)) ? styles.sr_on : styles.sr_off} title='Negative'>N</span>
+					<span class={(regs[Register.SR] & (1 << 2)) ? styles.sr_on : styles.sr_off} title='Zero'>Z</span>
+					<span class={(regs[Register.SR] & (1 << 1)) ? styles.sr_on : styles.sr_off} title='Overflow'>V</span>
+					<span class={(regs[Register.SR] & (1 << 0)) ? styles.sr_on : styles.sr_off} title='Carry'>C</span>
 			</div>}
 			Function:&nbsp;
 			<FunctionDropdown alwaysChange={true} options={functions} value={func} onChange={onChangeFunction} />
