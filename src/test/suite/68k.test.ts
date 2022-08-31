@@ -206,6 +206,16 @@ suite("68k-dis", () => {
 		const dis = print_insn_m68k(insn, 0);
 		assert.strictEqual(dis.text, "moveq #1,d1");
 	});
+	test("divu.l", () => {
+		const insn = new Uint8Array([0x4c, 0x40, 0x24, 0x01]);
+		const dis = print_insn_m68k(insn, 0);
+		assert.strictEqual(dis.text, "divu.l d0,d1,d2");
+	});
+	test("divul.l", () => {
+		const insn = new Uint8Array([0x4c, 0x40, 0x20, 0x01]);
+		const dis = print_insn_m68k(insn, 0);
+		assert.strictEqual(dis.text, "divul.l d0,d1,d2");
+	});
 });
 
 suite("68k-fpu", () => {
@@ -236,13 +246,10 @@ suite("68k-fpu", () => {
 	});
 });
 
-/*
 suite("68k-mmu", () => {
 	test("ptrapbc.l #65537", () => {
 		const insn = new Uint8Array([0xF0, 0x7b, 0x00, 0x01, 0x00, 0x01]);
 		const dis = print_insn_m68k(insn, 0);
-		// always gets "ftrapeq.l (cpid=0) #0". seems both have same opcode...
 		assert.strictEqual(dis.text, "ptrapbc.l #65537");
 	});
 });
-*/
